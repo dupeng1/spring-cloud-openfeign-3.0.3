@@ -71,6 +71,10 @@ import static feign.form.ContentType.MULTIPART;
  * @author Olga Maciaszek-Sharma
  * @author Hyeonmin Park
  */
+
+/**
+ * 注入Decoder，Encoder，Contract等各种组件
+ */
 @Configuration(proxyBeanMethods = false)
 public class FeignClientsConfiguration {
 
@@ -129,6 +133,8 @@ public class FeignClientsConfiguration {
 		return new PageableSpringQueryMapEncoder();
 	}
 
+	//SpringMVC注解它们是被谁处理的呢？
+	//Contract的实现类SpringMVCContract就是来解析它们的，解析所有的注解信息、然后拼凑成一个完整的HTTP请求所需要的信息。
 	@Bean
 	@ConditionalOnMissingBean
 	public Contract feignContract(ConversionService feignConversionService) {

@@ -67,6 +67,14 @@ import static org.springframework.cloud.openfeign.loadbalancer.LoadBalancerUtils
  * @author Olga Maciaszek-Sharma
  * @since 2.2.6
  */
+
+/**
+ * 1.集成Eureka后默认客户端类型
+ * 2.加入Spring retry包支持
+ * 3.@FeignClient不指定url属性
+ * 4.打开重试开关，设置值为真spring.cloud.loadbalancer.retry.enabled=true
+ * 5.涵盖了FeignBlockingLoadBalancerClient的功能，并且能够进行重试
+ */
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class RetryableFeignBlockingLoadBalancerClient implements Client {
 

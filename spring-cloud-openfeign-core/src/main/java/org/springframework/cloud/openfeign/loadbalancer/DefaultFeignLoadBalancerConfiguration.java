@@ -40,6 +40,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(LoadBalancerProperties.class)
+//默认HttpURLConnection
 class DefaultFeignLoadBalancerConfiguration {
 
 	@Bean

@@ -147,11 +147,14 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+		//注册默认配置
 		registerDefaultConfiguration(metadata, registry);
+		//注册FeignClients
 		registerFeignClients(metadata, registry);
 	}
 
 	private void registerDefaultConfiguration(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+		//获得注解属性
 		Map<String, Object> defaultAttrs = metadata.getAnnotationAttributes(EnableFeignClients.class.getName(), true);
 
 		if (defaultAttrs != null && defaultAttrs.containsKey("defaultConfiguration")) {
@@ -162,18 +165,25 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 			else {
 				name = "default." + metadata.getClassName();
 			}
+			//name 是 default.com.xyy.UserApplication
+			//注册EnableFeignClients注解配置，class是FeignClientSpecification，为了获取EnableFeignClients注解配置
 			registerClientConfiguration(registry, name, defaultAttrs.get("defaultConfiguration"));
 		}
 	}
 
+	//这个方法会扫描类路径上标记@FeignClient注解的接口，根据@EnableFeignClients注解上的配置，并循环注册FeignClient
 	public void registerFeignClients(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
 
 		LinkedHashSet<BeanDefinition> candidateComponents = new LinkedHashSet<>();
+		//获取@EnableFeignClients注解属性值
 		Map<String, Object> attrs = metadata.getAnnotationAttributes(EnableFeignClients.class.getName());
+		//获取@EnableFeignClients的clients属性
 		final Class<?>[] clients = attrs == null ? null : (Class<?>[]) attrs.get("clients");
 		if (clients == null || clients.length == 0) {
+			//扫描器
 			ClassPathScanningCandidateComponentProvider scanner = getScanner();
 			scanner.setResourceLoader(this.resourceLoader);
+			// 过滤带有@FeignClient注解的包
 			scanner.addIncludeFilter(new AnnotationTypeFilter(FeignClient.class));
 			Set<String> basePackages = getBasePackages(metadata);
 			for (String basePackage : basePackages) {
@@ -187,37 +197,49 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 		}
 
 		for (BeanDefinition candidateComponent : candidateComponents) {
+			//扫描组件
 			if (candidateComponent instanceof AnnotatedBeanDefinition) {
 				// verify annotated class is an interface
 				AnnotatedBeanDefinition beanDefinition = (AnnotatedBeanDefinition) candidateComponent;
 				AnnotationMetadata annotationMetadata = beanDefinition.getMetadata();
 				Assert.isTrue(annotationMetadata.isInterface(), "@FeignClient can only be specified on an interface");
-
+				//获取@FeignClient注解的属性值
 				Map<String, Object> attributes = annotationMetadata
 						.getAnnotationAttributes(FeignClient.class.getCanonicalName());
-
+				//获取Client名称
 				String name = getClientName(attributes);
+				//如果有configuration属性，还要加载配置
 				registerClientConfiguration(registry, name, attributes.get("configuration"));
-
+				// 这里就是最终将扫描的内容放入到容器中
 				registerFeignClient(registry, annotationMetadata, attributes);
 			}
 		}
 	}
 
+	//将FeignClient注解上的属性信息，封装到BeanDefinition中，并注册到Spring容器中
 	private void registerFeignClient(BeanDefinitionRegistry registry, AnnotationMetadata annotationMetadata,
 			Map<String, Object> attributes) {
+		//FeignClient注解的类全路径类名
 		String className = annotationMetadata.getClassName();
+		//FeignClient注解的类
 		Class clazz = ClassUtils.resolveClassName(className, null);
 		ConfigurableBeanFactory beanFactory = registry instanceof ConfigurableBeanFactory
 				? (ConfigurableBeanFactory) registry : null;
+		//获取配置的contextId
 		String contextId = getContextId(beanFactory, attributes);
+		//获取配置的name
 		String name = getName(attributes);
+		//注册的是FeignClientFactoryBean，它实现了FactoryBean接口，表明这是一个工厂bean，用于创建代理Bean
+		//将feign客户端注解的信息交给工厂bean代理类并将代理类的定义注册到spring容器
 		FeignClientFactoryBean factoryBean = new FeignClientFactoryBean();
 		factoryBean.setBeanFactory(beanFactory);
 		factoryBean.setName(name);
 		factoryBean.setContextId(contextId);
 		factoryBean.setType(clazz);
 		factoryBean.setRefreshableClient(isClientRefreshEnabled());
+		//BeanDefinitionBuilder创建的是一个FeignClientFactoryBean类型的工厂bean
+		//初始化BeanDefinitionBuilder构建的BeanDefinition的instanceSupplier，即调用instanceSupplier方法产生bean
+		//初始化BeanDefinitionBuilder构建的BeanDefinition的beanClass
 		BeanDefinitionBuilder definition = BeanDefinitionBuilder.genericBeanDefinition(clazz, () -> {
 			factoryBean.setUrl(getUrl(beanFactory, attributes));
 			factoryBean.setPath(getPath(beanFactory, attributes));
@@ -234,10 +256,12 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 			}
 			return factoryBean.getObject();
 		});
+		//类型注入
 		definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+		//懒加载
 		definition.setLazyInit(true);
 		validate(attributes);
-
+		//获取BeanDefinitionBuilder构建的BeanDefinition
 		AbstractBeanDefinition beanDefinition = definition.getBeanDefinition();
 		beanDefinition.setAttribute(FactoryBean.OBJECT_TYPE_ATTRIBUTE, className);
 		beanDefinition.setAttribute("feignClientsRegistrarFactoryBean", factoryBean);
@@ -253,6 +277,14 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 		}
 
 		BeanDefinitionHolder holder = new BeanDefinitionHolder(beanDefinition, className, qualifiers);
+		//这里的BeanDefinitionHolder可以理解为BeanDefinition的包装类，提供了根据beanName获取BeanDefinition的方法，可以理解为额外加了一层封装。
+		//向BeanDefinitionRegistry注册了刚实例化的这个BeanDefinitionHolder。这里完成的是将FeignClient注解的类的信息交给工厂bean代理类，
+		// 并将代理类的定义注册到Spring的容器中。
+
+		//注册BeanDefinition的key是className，value是BeanDefinition
+		//注册别名的key是className，value是qualifiers
+		//至此，已经把要创建的接口代理对象的信息放入registry里面
+		//之后spring在启动调用refresh方法的时候会负责bean的实例化。在实例化过程中，调用FeignClientFactoryBean的getObject方法：
 		BeanDefinitionReaderUtils.registerBeanDefinition(holder, registry);
 
 		registerOptionsBeanDefinition(registry, contextId);
@@ -283,11 +315,13 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 	}
 
 	private String getContextId(ConfigurableBeanFactory beanFactory, Map<String, Object> attributes) {
+		//获取配置的contextId
 		String contextId = (String) attributes.get("contextId");
 		if (!StringUtils.hasText(contextId)) {
+			//如果配置的contextId为空，则默认
 			return getName(attributes);
 		}
-
+		//使用beanFactory的表达式解析器解析contextId
 		contextId = resolve(beanFactory, contextId);
 		return getName(contextId);
 	}
@@ -337,20 +371,23 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 				.getAnnotationAttributes(EnableFeignClients.class.getCanonicalName());
 
 		Set<String> basePackages = new HashSet<>();
+		//@EnableFeignClients 注解的value
 		for (String pkg : (String[]) attributes.get("value")) {
 			if (StringUtils.hasText(pkg)) {
 				basePackages.add(pkg);
 			}
 		}
+		//@EnableFeignClients 注解的basePackages
 		for (String pkg : (String[]) attributes.get("basePackages")) {
 			if (StringUtils.hasText(pkg)) {
 				basePackages.add(pkg);
 			}
 		}
+		//@EnableFeignClients 注解的basePackageClasses
 		for (Class<?> clazz : (Class[]) attributes.get("basePackageClasses")) {
 			basePackages.add(ClassUtils.getPackageName(clazz));
 		}
-
+		//以上都没有，则设为有@EnableFeignClients注解类所在的包
 		if (basePackages.isEmpty()) {
 			basePackages.add(ClassUtils.getPackageName(importingClassMetadata.getClassName()));
 		}
@@ -403,6 +440,7 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 	}
 
 	private void registerClientConfiguration(BeanDefinitionRegistry registry, Object name, Object configuration) {
+		//注册一个FeignClientSpecification
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(FeignClientSpecification.class);
 		builder.addConstructorArgValue(name);
 		builder.addConstructorArgValue(configuration);

@@ -51,6 +51,7 @@ import org.springframework.context.annotation.Import;
 @Conditional(HttpClient5DisabledConditions.class)
 @Import(HttpClientFeignConfiguration.class)
 @EnableConfigurationProperties(LoadBalancerProperties.class)
+//ApacheHttpClient请求配置
 class HttpClientFeignLoadBalancerConfiguration {
 
 	@Bean

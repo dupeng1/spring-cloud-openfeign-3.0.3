@@ -68,6 +68,10 @@ import org.springframework.util.StringUtils;
  * @author Sam Kruglov
  * @author Jasbir Singh
  */
+
+/**
+ * 代理bean
+ */
 public class FeignClientFactoryBean
 		implements FactoryBean<Object>, InitializingBean, ApplicationContextAware, BeanFactoryAware {
 
@@ -78,8 +82,10 @@ public class FeignClientFactoryBean
 
 	private static Log LOG = LogFactory.getLog(FeignClientFactoryBean.class);
 
+	//目标bean的类型
 	private Class<?> type;
 
+	//目标bean的名称
 	private String name;
 
 	private String url;
@@ -117,19 +123,27 @@ public class FeignClientFactoryBean
 	}
 
 	protected Feign.Builder feign(FeignContext context) {
+		//获取contextId指定的ApplicationContext，从ApplicationContext获取FeignLoggerFactory实例
 		FeignLoggerFactory loggerFactory = get(context, FeignLoggerFactory.class);
+		//通过FeignLoggerFactory创建logger对象
 		Logger logger = loggerFactory.create(type);
 
 		// @formatter:off
+		//获取contextId指定的ApplicationContext，从ApplicationContext获取Feign.Builder实例，并配置Feign.Builder实例
 		Feign.Builder builder = get(context, Feign.Builder.class)
 				// required values
+				//设置Feign.Builder的logger
 				.logger(logger)
+				//设置Feign.Builder的Encoder
 				.encoder(get(context, Encoder.class))
+				//设置Feign.Builder的Decoder
 				.decoder(get(context, Decoder.class))
+				//设置Feign.Builder的Contract
 				.contract(get(context, Contract.class));
 		// @formatter:on
-
+		//context和属性配置Feign.Builder实例
 		configureFeign(context, builder);
+		//FeignBuilderCustomizer配置Feign.Builder实例
 		applyBuildCustomizers(context, builder);
 
 		return builder;
@@ -147,6 +161,12 @@ public class FeignClientFactoryBean
 	}
 
 	protected void configureFeign(FeignContext context, Feign.Builder builder) {
+		/**
+		 * feign.client.config.context1.(一组配置)=
+		 * feign.client.config.context2.(一组配置)=
+		 * feign.client.config.context3.(一组配置)=
+		 * feign.client.defaultConfig=context1
+		 */
 		FeignClientProperties properties = beanFactory != null ? beanFactory.getBean(FeignClientProperties.class)
 				: applicationContext.getBean(FeignClientProperties.class);
 
@@ -154,18 +174,26 @@ public class FeignClientFactoryBean
 		setInheritParentContext(feignClientConfigurer.inheritParentConfiguration());
 
 		if (properties != null && inheritParentContext) {
+			//默认属性，属性注入放在后面
 			if (properties.isDefaultToProperties()) {
+				//用context更新Feign.Builder
 				configureUsingConfiguration(context, builder);
+				//用default属性去更新Feign.Builder
 				configureUsingProperties(properties.getConfig().get(properties.getDefaultConfig()), builder);
+				//用自定义属性去更新Feign.Builder
 				configureUsingProperties(properties.getConfig().get(contextId), builder);
 			}
 			else {
+				//用default属性去更新Feign.Builder
 				configureUsingProperties(properties.getConfig().get(properties.getDefaultConfig()), builder);
+				//用自定义属性去更新Feign.Builder
 				configureUsingProperties(properties.getConfig().get(contextId), builder);
+				//用context更新Feign.Builder
 				configureUsingConfiguration(context, builder);
 			}
 		}
 		else {
+			//用context更新Feign.Builder
 			configureUsingConfiguration(context, builder);
 		}
 	}
@@ -310,6 +338,7 @@ public class FeignClientFactoryBean
 		}
 	}
 
+	//获取contextId指定的ApplicationContext，从ApplicationContext获取type实例
 	protected <T> T get(FeignContext context, Class<T> type) {
 		T instance = context.getInstance(contextId, type);
 		if (instance == null) {
@@ -341,9 +370,12 @@ public class FeignClientFactoryBean
 	}
 
 	protected <T> T loadBalance(Feign.Builder builder, FeignContext context, HardCodedTarget<T> target) {
+		//获取contextId指定的ApplicationContext，从ApplicationContext获取Client实例
+		//这里创建的Client实例是一个LoadBalancerFeignClient的对象
 		Client client = getOptional(context, Client.class);
 		if (client != null) {
 			builder.client(client);
+			//获取contextId指定的ApplicationContext，从ApplicationContext获取Targeter实例
 			Targeter targeter = get(context, Targeter.class);
 			return targeter.target(this, builder, context, target);
 		}
@@ -366,6 +398,7 @@ public class FeignClientFactoryBean
 		return null;
 	}
 
+	//我们在业务代码中通过@Autowire依赖注入或者通过getBean依赖查找时，此方法会被调用。内部会调用getTarget方法
 	@Override
 	public Object getObject() {
 		return getTarget();
@@ -377,10 +410,12 @@ public class FeignClientFactoryBean
 	 * information
 	 */
 	<T> T getTarget() {
+		//获取FeignContext这个Bean
 		FeignContext context = beanFactory != null ? beanFactory.getBean(FeignContext.class)
 				: applicationContext.getBean(FeignContext.class);
 		Feign.Builder builder = feign(context);
 
+		//如果feignClient没有地址url属性，则走负载均衡
 		if (!StringUtils.hasText(url)) {
 			if (url != null && LOG.isWarnEnabled()) {
 				LOG.warn("The provided URL is empty. Will try picking an instance via load-balancing.");
@@ -395,12 +430,16 @@ public class FeignClientFactoryBean
 				url = name;
 			}
 			url += cleanPath();
+			//用JDK动态代理生成代理
 			return (T) loadBalance(builder, context, new HardCodedTarget<>(type, name, url));
 		}
+		//如果不为空，则生成默认的代理类
 		if (StringUtils.hasText(url) && !url.startsWith("http")) {
 			url = "http://" + url;
 		}
 		String url = this.url + cleanPath();
+		//获取一个子上下文，然后从这个子上下文中查找Client bean，SpringCloud会为每一个feignClient创建一个子上下文，然后存入以contextId为key的map中
+		//此处会返回LoadBalancerFeignClient这个Client
 		Client client = getOptional(context, Client.class);
 		if (client != null) {
 			if (client instanceof FeignBlockingLoadBalancerClient) {

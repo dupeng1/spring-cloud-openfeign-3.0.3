@@ -51,8 +51,10 @@ final class LoadBalancerUtils {
 			Request feignRequest, org.springframework.cloud.client.loadbalancer.Request lbRequest,
 			org.springframework.cloud.client.loadbalancer.Response<ServiceInstance> lbResponse,
 			Set<LoadBalancerLifecycle> supportedLifecycleProcessors, boolean loadBalanced) throws IOException {
+		//调用supportedLifecycleProcessors的钩子方法onStartRequest开始请求
 		supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onStartRequest(lbRequest, lbResponse));
 		try {
+			//feignClient执行execute,进行RPC调用。这个feignClient的类型是Default,就是使用Http执行网络调用。
 			Response response = feignClient.execute(feignRequest, options);
 			if (loadBalanced) {
 				supportedLifecycleProcessors.forEach(
@@ -63,6 +65,7 @@ final class LoadBalancerUtils {
 		}
 		catch (Exception exception) {
 			if (loadBalanced) {
+				//执行完成要调用supportedLifecycleProcessors的钩子方法onComplete
 				supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onComplete(
 						new CompletionContext<>(CompletionContext.Status.FAILED, exception, lbRequest, lbResponse)));
 			}

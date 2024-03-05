@@ -47,6 +47,7 @@ public @interface FeignClient {
 	 * Can be specified as property key, eg: ${propertyKey}.
 	 * @return the name of the service with optional protocol prefix
 	 */
+	//指定FeignClient的名称，如果项目使用了Ribbon，name属性会作为微服务的名称，用于服务发现
 	@AliasFor("name")
 	String value() default "";
 

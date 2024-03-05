@@ -47,6 +47,7 @@ import org.springframework.context.annotation.Import;
 @ConditionalOnBean({ LoadBalancerClient.class, LoadBalancerClientFactory.class })
 @Import(OkHttpFeignConfiguration.class)
 @EnableConfigurationProperties(LoadBalancerProperties.class)
+//OkHttpClient网络请求方式
 class OkHttpFeignLoadBalancerConfiguration {
 
 	@Bean
@@ -55,6 +56,7 @@ class OkHttpFeignLoadBalancerConfiguration {
 	public Client feignClient(okhttp3.OkHttpClient okHttpClient, LoadBalancerClient loadBalancerClient,
 			LoadBalancerProperties properties, LoadBalancerClientFactory loadBalancerClientFactory) {
 		OkHttpClient delegate = new OkHttpClient(okHttpClient);
+		//阻塞式请求，自带负载均衡
 		return new FeignBlockingLoadBalancerClient(delegate, loadBalancerClient, properties, loadBalancerClientFactory);
 	}
 
@@ -68,6 +70,7 @@ class OkHttpFeignLoadBalancerConfiguration {
 			LoadBalancedRetryFactory loadBalancedRetryFactory, LoadBalancerProperties properties,
 			LoadBalancerClientFactory loadBalancerClientFactory) {
 		OkHttpClient delegate = new OkHttpClient(okHttpClient);
+		//阻塞式请求，自带负载均衡，可重试
 		return new RetryableFeignBlockingLoadBalancerClient(delegate, loadBalancerClient, loadBalancedRetryFactory,
 				properties, loadBalancerClientFactory);
 	}

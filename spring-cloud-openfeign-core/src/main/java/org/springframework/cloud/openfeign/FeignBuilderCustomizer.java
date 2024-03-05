@@ -23,6 +23,7 @@ import feign.Feign;
  *
  * @author Matt King
  */
+//Feign构建器定制器
 @FunctionalInterface
 public interface FeignBuilderCustomizer {
 

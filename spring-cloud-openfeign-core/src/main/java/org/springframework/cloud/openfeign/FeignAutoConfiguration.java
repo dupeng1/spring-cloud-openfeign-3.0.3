@@ -97,6 +97,7 @@ public class FeignAutoConfiguration {
 		return HasFeatures.namedFeature("Feign", Feign.class);
 	}
 
+	//注入FeignContext
 	@Bean
 	public FeignContext feignContext() {
 		FeignContext context = new FeignContext();

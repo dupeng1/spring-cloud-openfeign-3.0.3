@@ -35,6 +35,7 @@ import org.springframework.lang.Nullable;
 public class FeignContext extends NamedContextFactory<FeignClientSpecification> {
 
 	public FeignContext() {
+		//设置FeignClientsConfiguration配置类，后面创建容器加载配置类：
 		super(FeignClientsConfiguration.class, "feign", "feign.client.name");
 	}
 
