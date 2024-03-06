@@ -50,7 +50,7 @@ public class RequestParamParameterProcessor implements AnnotatedParameterProcess
 		int parameterIndex = context.getParameterIndex();
 		Class<?> parameterType = method.getParameterTypes()[parameterIndex];
 		MethodMetadata data = context.getMethodMetadata();
-
+		//map类型
 		if (Map.class.isAssignableFrom(parameterType)) {
 			checkState(data.queryMapIndex() == null, "Query map can only be present once.");
 			data.queryMapIndex(parameterIndex);
@@ -62,7 +62,7 @@ public class RequestParamParameterProcessor implements AnnotatedParameterProcess
 		String name = requestParam.value();
 		checkState(emptyToNull(name) != null, "RequestParam.value() was empty on parameter %s", parameterIndex);
 		context.setParameterName(name);
-
+		//设置context中的参数初始值，以String.format("{%s}", name)方式填充
 		Collection<String> query = context.setTemplateParameter(name, data.template().queries().get(name));
 		data.template().query(name, query);
 		return true;

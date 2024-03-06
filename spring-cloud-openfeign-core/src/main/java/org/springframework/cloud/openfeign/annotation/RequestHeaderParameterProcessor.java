@@ -50,18 +50,18 @@ public class RequestHeaderParameterProcessor implements AnnotatedParameterProces
 		int parameterIndex = context.getParameterIndex();
 		Class<?> parameterType = method.getParameterTypes()[parameterIndex];
 		MethodMetadata data = context.getMethodMetadata();
-
+		//map类型
 		if (Map.class.isAssignableFrom(parameterType)) {
 			checkState(data.headerMapIndex() == null, "Header map can only be present once.");
 			data.headerMapIndex(parameterIndex);
 
 			return true;
 		}
-
+		//header名
 		String name = ANNOTATION.cast(annotation).value();
 		checkState(emptyToNull(name) != null, "RequestHeader.value() was empty on parameter %s", parameterIndex);
 		context.setParameterName(name);
-
+		//设置context中的参数初始值，以String.format("{%s}", name)方式填充
 		Collection<String> header = context.setTemplateParameter(name, data.template().headers().get(name));
 		data.template().header(name, header);
 		return true;

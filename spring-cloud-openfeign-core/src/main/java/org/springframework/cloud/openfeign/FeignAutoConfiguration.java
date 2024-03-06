@@ -80,6 +80,10 @@ import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResour
  * @author Nguyen Ky Thanh
  * @author Andrii Bohutskyi
  */
+
+/**
+ * 扫描到spring.factories中存在该类，加载该类
+ */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(Feign.class)
 @EnableConfigurationProperties({ FeignClientProperties.class, FeignHttpClientProperties.class,
@@ -88,16 +92,16 @@ import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResour
 public class FeignAutoConfiguration {
 
 	private static final Log LOG = LogFactory.getLog(FeignAutoConfiguration.class);
-
+	//@FeignClient注解生成的FeignClientSpecification对象
 	@Autowired(required = false)
 	private List<FeignClientSpecification> configurations = new ArrayList<>();
-
+	//注册Feign特性描述
 	@Bean
 	public HasFeatures feignFeature() {
 		return HasFeatures.namedFeature("Feign", Feign.class);
 	}
 
-	//注入FeignContext
+	//创建Feign上下文
 	@Bean
 	public FeignContext feignContext() {
 		FeignContext context = new FeignContext();

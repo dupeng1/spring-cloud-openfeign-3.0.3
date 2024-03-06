@@ -68,6 +68,10 @@ import org.springframework.util.StringUtils;
  * @author Olga Maciaszek-Sharma
  * @author Jasbir Singh
  */
+
+/**
+ * https://www.jianshu.com/p/ef322c4f817f
+ */
 class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLoaderAware, EnvironmentAware {
 
 	// patterned after Spring Integration IntegrationComponentScanRegistrar
@@ -439,6 +443,7 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 				"Either 'name' or 'value' must be provided in @" + FeignClient.class.getSimpleName());
 	}
 
+	//根据@EnableFeignClients注解中配置的defaultConfiguration属性配置，生成一个FeignClientSpecification对象，name="default." + 应用启动类全名路径
 	private void registerClientConfiguration(BeanDefinitionRegistry registry, Object name, Object configuration) {
 		//注册一个FeignClientSpecification
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(FeignClientSpecification.class);

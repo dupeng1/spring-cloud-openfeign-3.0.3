@@ -32,6 +32,12 @@ import org.springframework.lang.Nullable;
  * @author Matt King
  * @author Jasbir Singh
  */
+/**
+ * 对外提供的实例工厂类，为每个Feign客户端创建一个ApplicationContext，并从中提取所需的Bean
+ * 外部主要通过该工厂类获取FeignClient客户端实例，通过继承NamedContextFactory会为每一个FeignClient客户端都创建一个ApplicationContext，
+ * 以便于从每个FeignClient的ApplicationContext获取指定的Bean对象，这个工厂类最主要的特征就是隔离了每个FeignClient，
+ * 每个FeignClient客户端都有自己的一个ApplicationContext上下文。
+ */
 public class FeignContext extends NamedContextFactory<FeignClientSpecification> {
 
 	public FeignContext() {
@@ -48,12 +54,12 @@ public class FeignContext extends NamedContextFactory<FeignClientSpecification> 
 			return null;
 		}
 	}
-
+	//获取实例
 	@Nullable
 	public <T> Map<String, T> getInstancesWithoutAncestors(String name, Class<T> type) {
 		return getContext(name).getBeansOfType(type);
 	}
-
+	//获取实例集合
 	public <T> T getInstance(String contextName, String beanName, Class<T> type) {
 		return getContext(contextName).getBean(beanName, type);
 	}
